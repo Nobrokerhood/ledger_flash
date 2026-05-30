@@ -1,0 +1,5 @@
+voucher_number,date,ledger_name,narration,amount,invoice_number,bill_number
+V-1001,2026-05-01,Salary,Monthly salary paid to office staff,75000,INV-1001,
+V-1002,2026-05-02,Salary,Being amount paid for water tanker charges,8500,,B-204
+V-1003,2026-05-03,Security Charges,Monthly housekeeping service charges,22000,INV-1003,
+V-1004,2026-05-04,Gardening Charges,Gardening maintenance for common area,12000,,B-206

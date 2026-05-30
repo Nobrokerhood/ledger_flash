@@ -1,0 +1,9 @@
+.env
+backend/credentials/
+__pycache__/
+*.py[cod]
+.venv/
+backend/uploads/*
+backend/reports/*
+data/*
+!data/.gitkeep

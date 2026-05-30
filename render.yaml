@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: ledger-flash
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn backend.main:app -k uvicorn.workers.UvicornWorker
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: MAX_UPLOAD_MB
+        value: 10
