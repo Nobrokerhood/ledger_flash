@@ -7,7 +7,7 @@ body { background:var(--cream); color:var(--ink); font-family:Inter,system-ui,-a
 .hero h1 span { color:#69ded5; }.hero p { color:#d0e2e8; max-width:650px; }.eyebrow,.step { color:#5de0d5; font-size:.72rem; font-weight:800; letter-spacing:.13em; }
 .panel { border:0; border-radius:14px; box-shadow:0 3px 14px #102b3f0d; }
 .stat-grid { display:grid; gap:1rem; grid-template-columns:repeat(4,minmax(0,1fr)); }
-.stat-item { min-width:0; }
+.stat-grid > * { max-width:none!important; min-width:0; padding:0!important; width:auto!important; }
 .stat { border-left:4px solid var(--teal); }.stat .number { color:var(--navy); font-size:2rem; font-weight:800; }.stat p { color:#70808a; font-size:.8rem; font-weight:700; letter-spacing:.07em; margin:0; text-transform:uppercase; }
 .btn-primary { background:var(--blue); border-color:var(--blue); }.btn-accent { background:var(--teal); color:white; font-weight:700; }.btn-accent:hover { background:#0d8f87; color:white; }
 .page-heading { margin-bottom:1.35rem; }.page-heading p { color:#70808a; }.search { max-width:340px; }
