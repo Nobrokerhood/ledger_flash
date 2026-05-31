@@ -1,4 +1,19 @@
 const API_BASE = location.hostname.endsWith("github.io") ? "https://ledger-flash.onrender.com/api" : "/api";
+const themeToggle = document.querySelector("#theme-toggle");
+const themeIcon = document.querySelector("#theme-icon");
+const setTheme = theme => {
+  document.documentElement.dataset.theme = theme;
+  const dark = theme === "dark";
+  themeIcon.textContent = dark ? "Sun" : "Moon";
+  themeToggle.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+  themeToggle.title = dark ? "Switch to light mode" : "Switch to dark mode";
+};
+setTheme(localStorage.getItem("ledger-flash-theme") || "light");
+themeToggle.addEventListener("click", () => {
+  const theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  localStorage.setItem("ledger-flash-theme", theme);
+  setTheme(theme);
+});
 const api = async (path, options = {}) => {
   const response = await fetch(`${API_BASE}${path}`, options);
   if (!response.ok) throw new Error((await response.json()).detail || "Request failed");
