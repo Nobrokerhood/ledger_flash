@@ -49,3 +49,9 @@ Common alternatives such as `voucher no`, `ledger`, `description`, `particulars`
 ## Deploy on Render
 
 Create a Blueprint from this repository using `render.yaml`, then add `GOOGLE_SHEET_ID`, the Render Google credential variables above, and `GEMINI_API_KEY` in the Render dashboard.
+
+If configuring the Render service manually instead of using the Blueprint, use:
+
+```bash
+gunicorn backend.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+```
