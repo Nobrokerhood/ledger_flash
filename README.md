@@ -2,7 +2,7 @@
 
 Ledger Flash flags transactions that may have been posted to the wrong ledger, suggests a correction, and learns from approved review decisions.
 
-Live application: [https://ledger-flash.onrender.com](https://ledger-flash.onrender.com)
+Live application: 
 
 ## Run locally
 
