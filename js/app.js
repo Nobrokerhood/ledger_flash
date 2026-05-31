@@ -1,8 +1,11 @@
+const API_BASE = location.hostname.endsWith("github.io") ? "https://ledger-flash.onrender.com/api" : "/api";
 const api = async (path, options = {}) => {
-  const response = await fetch(`/api${path}`, options);
+  const response = await fetch(`${API_BASE}${path}`, options);
   if (!response.ok) throw new Error((await response.json()).detail || "Request failed");
   return response.json();
 };
+document.querySelector("#excel-report").href = `${API_BASE}/download-report?format=xlsx`;
+document.querySelector("#pdf-report").href = `${API_BASE}/download-report?format=pdf`;
 const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" })[char]);
 const alertBox = (message, type = "success") => {
   document.querySelector("#alert").innerHTML = `<div class="alert alert-${type} alert-dismissible fade show">${escapeHtml(message)}<button class="btn-close" data-bs-dismiss="alert"></button></div>`;

@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.config import ALLOWED_ORIGINS, BASE_DIR
@@ -41,4 +42,10 @@ def dashboard_stats():
     }
 
 
-app.mount("/", StaticFiles(directory=BASE_DIR / "frontend", html=True), name="frontend")
+app.mount("/css", StaticFiles(directory=BASE_DIR / "css"), name="css")
+app.mount("/js", StaticFiles(directory=BASE_DIR / "js"), name="js")
+
+
+@app.get("/", include_in_schema=False)
+def frontend():
+    return FileResponse(BASE_DIR / "index.html")
