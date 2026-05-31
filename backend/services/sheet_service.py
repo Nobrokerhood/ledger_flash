@@ -1,9 +1,22 @@
 import json
+import os
 from pathlib import Path
 from threading import Lock
 from typing import Any
 
 from backend.config import DATA_DIR, GOOGLE_SERVICE_ACCOUNT_FILE, GOOGLE_SHEET_ID
+
+GOOGLE_SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive",
+]
+GOOGLE_ENV_FIELDS = {
+    "project_id": "GOOGLE_PROJECT_ID",
+    "private_key_id": "GOOGLE_PRIVATE_KEY_ID",
+    "private_key": "GOOGLE_PRIVATE_KEY",
+    "client_email": "GOOGLE_CLIENT_EMAIL",
+    "client_id": "GOOGLE_CLIENT_ID",
+}
 
 SHEETS = {
     "Ledger_Master": ["ledger_id", "ledger_name", "created_at"],
@@ -34,16 +47,45 @@ class SheetService:
         self.ensure_sheets()
 
     def _connect(self):
-        if not (GOOGLE_SHEET_ID and GOOGLE_SERVICE_ACCOUNT_FILE):
+        if not GOOGLE_SHEET_ID:
             return None
         try:
             import gspread
 
-            return gspread.service_account(filename=GOOGLE_SERVICE_ACCOUNT_FILE).open_by_key(
-                GOOGLE_SHEET_ID
-            )
+            client = self._google_client(gspread)
+            return client.open_by_key(GOOGLE_SHEET_ID)
         except Exception as exc:
             raise RuntimeError(f"Google Sheets connection failed: {exc}") from exc
+
+    @staticmethod
+    def _google_client(gspread):
+        if GOOGLE_SERVICE_ACCOUNT_FILE:
+            credential_file = Path(GOOGLE_SERVICE_ACCOUNT_FILE)
+            if not credential_file.exists():
+                raise RuntimeError(
+                    f"GOOGLE_SERVICE_ACCOUNT_FILE does not exist: {credential_file}"
+                )
+            return gspread.service_account(filename=str(credential_file))
+
+        values = {field: os.getenv(variable, "") for field, variable in GOOGLE_ENV_FIELDS.items()}
+        missing = [
+            GOOGLE_ENV_FIELDS[field]
+            for field, value in values.items()
+            if not value
+        ]
+        if missing:
+            raise RuntimeError(
+                "Set GOOGLE_SERVICE_ACCOUNT_FILE for local use or configure these "
+                f"Render variables: {', '.join(missing)}"
+            )
+
+        from google.oauth2.service_account import Credentials
+
+        values["private_key"] = values["private_key"].replace("\\n", "\n")
+        values["type"] = "service_account"
+        values["token_uri"] = "https://oauth2.googleapis.com/token"
+        credentials = Credentials.from_service_account_info(values, scopes=GOOGLE_SCOPES)
+        return gspread.authorize(credentials)
 
     @property
     def mode(self) -> str:

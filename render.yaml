@@ -11,3 +11,17 @@ services:
         value: gemini-2.5-flash
       - key: MAX_UPLOAD_MB
         value: 10
+      - key: GOOGLE_SHEET_ID
+        sync: false
+      - key: GOOGLE_PROJECT_ID
+        sync: false
+      - key: GOOGLE_PRIVATE_KEY_ID
+        sync: false
+      - key: GOOGLE_PRIVATE_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_EMAIL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false

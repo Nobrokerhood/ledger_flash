@@ -20,11 +20,21 @@ The app works immediately with file-backed JSON storage and a deterministic loca
 
 - `GEMINI_API_KEY`: enables Gemini 2.5 Flash analysis.
 - `GOOGLE_SHEET_ID`: ID of the spreadsheet used for application data.
-- `GOOGLE_SERVICE_ACCOUNT_FILE`: path to the Google service-account JSON file.
+- `GOOGLE_SERVICE_ACCOUNT_FILE`: local path to the Google service-account JSON file.
 - `ALLOWED_ORIGINS`: comma-separated frontend origins.
 - `MAX_UPLOAD_MB`: maximum accepted upload size.
 
-When both Google Sheets settings are present, the app creates missing worksheets automatically: `Ledger_Master`, `Transactions`, `Analysis_Result`, `Learning_Data`, and `Audit_History`.
+For Render, leave `GOOGLE_SERVICE_ACCOUNT_FILE` empty and set:
+
+- `GOOGLE_PROJECT_ID`
+- `GOOGLE_PRIVATE_KEY_ID`
+- `GOOGLE_PRIVATE_KEY`
+- `GOOGLE_CLIENT_EMAIL`
+- `GOOGLE_CLIENT_ID`
+
+Copy these values from the service-account JSON file. Paste `GOOGLE_PRIVATE_KEY` as the complete private key, including its `BEGIN PRIVATE KEY` and `END PRIVATE KEY` lines. The app accepts both real line breaks and escaped `\n` sequences.
+
+When the Google Sheet ID and either credential method are present, the app creates missing worksheets automatically: `Ledger_Master`, `Transactions`, `Analysis_Result`, `Learning_Data`, and `Audit_History`.
 
 ## Input columns
 
@@ -38,4 +48,4 @@ Common alternatives such as `voucher no`, `ledger`, `description`, `particulars`
 
 ## Deploy on Render
 
-Create a Blueprint from this repository using `render.yaml`, add the environment variables in Render, and provide a persistent Google Sheet for production storage.
+Create a Blueprint from this repository using `render.yaml`, then add `GOOGLE_SHEET_ID`, the Render Google credential variables above, and `GEMINI_API_KEY` in the Render dashboard.
