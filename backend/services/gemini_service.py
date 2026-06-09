@@ -39,7 +39,9 @@ class GeminiService:
             except Exception as exc:
                 last_error = exc
                 sleep(2**attempt)
-        raise RuntimeError(f"Gemini analysis failed after retries: {last_error}")
+        fallback = self._heuristic(transaction, ledgers)
+        fallback.reason = f"{fallback.reason} Gemini was unavailable, so Ledger Flash used local analysis."
+        return fallback, "heuristic"
 
     @staticmethod
     def _heuristic(transaction: Transaction, ledgers: list[str]) -> GeminiDecision:

@@ -1,6 +1,12 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+def _string(value) -> str:
+    if value is None:
+        return ""
+    return str(value)
 
 
 class Transaction(BaseModel):
@@ -12,6 +18,20 @@ class Transaction(BaseModel):
     amount: float = 0
     invoice_number: str = ""
     bill_number: str = ""
+
+    @field_validator(
+        "transaction_id",
+        "voucher_number",
+        "date",
+        "ledger_name",
+        "narration",
+        "invoice_number",
+        "bill_number",
+        mode="before",
+    )
+    @classmethod
+    def coerce_string_fields(cls, value):
+        return _string(value)
 
 
 class AnalysisResult(BaseModel):
@@ -30,6 +50,24 @@ class AnalysisResult(BaseModel):
     status: Literal["correct", "mismatch", "approved", "rejected"]
     source: Literal["gemini", "learning", "heuristic"]
     analyzed_at: str
+
+    @field_validator(
+        "result_id",
+        "transaction_id",
+        "voucher_number",
+        "date",
+        "invoice_number",
+        "bill_number",
+        "narration",
+        "current_ledger",
+        "suggested_ledger",
+        "reason",
+        "analyzed_at",
+        mode="before",
+    )
+    @classmethod
+    def coerce_string_fields(cls, value):
+        return _string(value)
 
 
 class ReviewRequest(BaseModel):
