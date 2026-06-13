@@ -2,6 +2,8 @@
 
 Ledger Flash flags transactions that may have been posted to the wrong ledger, suggests a correction, and learns from approved review decisions.
 
+In Exception Review, reviewers can approve the AI suggestion, choose a different ledger, or confirm the current ledger. Confirmed feedback is stored in `Learning_Data`; narrations matching a previous decision above 90% similarity are resolved before an OpenAI call, reducing repeat API usage.
+
 Live application: 
 
 ## Run locally

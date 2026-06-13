@@ -10,6 +10,11 @@ from backend.services.sheet_service import sheet_service
 router = APIRouter()
 
 
+@router.get("/ledgers")
+def ledgers():
+    return sheet_service.all("Ledger_Master")
+
+
 @router.post("/upload-ledger")
 async def upload_ledger(file: UploadFile = File(...)):
     content = file.file.read()

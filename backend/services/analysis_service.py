@@ -31,12 +31,18 @@ class AnalysisService:
     def _analyze(self, transaction: Transaction, ledgers: list[str]) -> AnalysisResult:
         learned = self.learning.find_match(transaction.narration, transaction.ledger_name)
         if learned:
+            correct_ledger = str(learned["correct_ledger"])
+            is_current_correct = correct_ledger.casefold() == transaction.ledger_name.casefold()
             decision = LedgerDecision(
-                status="mismatch",
+                status="correct" if is_current_correct else "mismatch",
                 current_ledger=transaction.ledger_name,
-                suggested_ledger=learned["correct_ledger"],
+                suggested_ledger=correct_ledger,
                 confidence=learned["confidence"],
-                reason="Matched a previously approved ledger correction.",
+                reason=(
+                    "Matched a previously confirmed correct posting."
+                    if is_current_correct
+                    else "Matched a previously approved ledger correction."
+                ),
             )
             source = "learning"
         else:

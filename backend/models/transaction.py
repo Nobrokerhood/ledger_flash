@@ -74,6 +74,16 @@ class ReviewRequest(BaseModel):
     result_id: str
 
 
+class CorrectionRequest(BaseModel):
+    result_id: str
+    correct_ledger: str = Field(min_length=1)
+
+    @field_validator("result_id", "correct_ledger", mode="before")
+    @classmethod
+    def coerce_string_fields(cls, value):
+        return _string(value).strip()
+
+
 class LedgerDecision(BaseModel):
     status: Literal["correct", "mismatch"]
     current_ledger: str

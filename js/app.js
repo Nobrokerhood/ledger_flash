@@ -57,11 +57,14 @@ document.querySelector("#analyze").addEventListener("click", async event => {
   finally { event.target.disabled = false; event.target.textContent = "Run AI analysis"; }
 });
 let results = [];
+let ledgers = [];
+let correctionResultId = "";
+const correctionModal = new bootstrap.Modal(document.querySelector("#correction-modal"));
 async function loadResults() { try { results = await api("/results"); renderResults(); } catch (error) { alertBox(error.message, "danger"); } }
 function renderResults() {
   const search = document.querySelector("#search").value.toLowerCase(), status = document.querySelector("#status-filter").value;
   const rows = results.filter(row => (!status || row.status === status) && JSON.stringify(row).toLowerCase().includes(search));
-  document.querySelector("#result-rows").innerHTML = rows.length ? rows.map(row => `<tr><td>${escapeHtml(row.voucher_number)}</td><td>${escapeHtml(row.invoice_number || row.bill_number)}</td><td>${escapeHtml(row.current_ledger)}</td><td><strong>${escapeHtml(row.suggested_ledger)}</strong><br><span class="badge badge-source">${escapeHtml(row.source)}</span></td><td>${row.confidence}%</td><td class="reason">${escapeHtml(row.reason)}</td><td><span class="badge badge-${row.status}">${row.status}</span></td><td>${row.status === "mismatch" ? `<button class="btn btn-sm btn-primary me-1" onclick="review('${row.result_id}','approve')">Approve</button><button class="btn btn-sm btn-light" onclick="review('${row.result_id}','reject')">Reject</button>` : "-"}</td></tr>`).join("") : `<tr><td colspan="8" class="text-center text-muted py-5">No analysis results found.</td></tr>`;
+  document.querySelector("#result-rows").innerHTML = rows.length ? rows.map(row => `<tr><td>${escapeHtml(row.voucher_number)}</td><td>${escapeHtml(row.invoice_number || row.bill_number)}</td><td>${escapeHtml(row.current_ledger)}</td><td><strong>${escapeHtml(row.suggested_ledger)}</strong><br><span class="badge badge-source">${escapeHtml(row.source)}</span></td><td>${row.confidence}%</td><td class="reason">${escapeHtml(row.reason)}</td><td><span class="badge badge-${row.status}">${row.status}</span></td><td><div class="d-flex flex-wrap gap-1">${row.status === "mismatch" ? `<button class="btn btn-sm btn-primary" onclick="review('${row.result_id}','approve')">Approve AI</button>` : ""}${["mismatch","correct"].includes(row.status) ? `<button class="btn btn-sm btn-outline-primary" onclick="openCorrection('${row.result_id}')">Choose ledger</button>` : ""}${row.status === "mismatch" ? `<button class="btn btn-sm btn-light" onclick="review('${row.result_id}','reject')">Dismiss</button>` : ""}</div></td></tr>`).join("") : `<tr><td colspan="8" class="text-center text-muted py-5">No analysis results found.</td></tr>`;
 }
 document.querySelector("#search").addEventListener("input", renderResults);
 document.querySelector("#status-filter").addEventListener("change", renderResults);
@@ -69,6 +72,34 @@ async function review(result_id, action) {
   try { await api(`/${action}-suggestion`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({result_id}) }); alertBox(`Suggestion ${action}d`); loadResults(); }
   catch (error) { alertBox(error.message, "danger"); }
 }
+async function openCorrection(resultId) {
+  try {
+    if (!ledgers.length) ledgers = await api("/ledgers");
+    const result = results.find(row => String(row.result_id) === String(resultId));
+    correctionResultId = resultId;
+    document.querySelector("#correct-ledger").innerHTML = ledgers.map(row => {
+      const name = String(row.ledger_name || "");
+      const selected = result && name.toLowerCase() === String(result.suggested_ledger).toLowerCase() ? " selected" : "";
+      return `<option value="${escapeHtml(name)}"${selected}>${escapeHtml(name)}</option>`;
+    }).join("");
+    correctionModal.show();
+  } catch (error) { alertBox(error.message, "danger"); }
+}
+document.querySelector("#save-correction").addEventListener("click", async event => {
+  event.target.disabled = true;
+  try {
+    const correct_ledger = document.querySelector("#correct-ledger").value;
+    await api("/submit-correction", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({result_id: correctionResultId, correct_ledger}),
+    });
+    correctionModal.hide();
+    alertBox("Feedback saved. Similar future entries can skip the AI call.");
+    loadResults();
+  } catch (error) { alertBox(error.message, "danger"); }
+  finally { event.target.disabled = false; }
+});
 async function loadLearning() {
   try { const rows = await api("/learning-data"); document.querySelector("#learning-rows").innerHTML = rows.length ? rows.map(row => `<tr><td>${escapeHtml(row.narration)}</td><td>${escapeHtml(row.wrong_ledger)}</td><td><strong>${escapeHtml(row.correct_ledger)}</strong></td><td>${escapeHtml(row.timestamp)}</td></tr>`).join("") : `<tr><td colspan="4" class="text-center text-muted py-5">Approved corrections will appear here.</td></tr>`; }
   catch (error) { alertBox(error.message, "danger"); }
