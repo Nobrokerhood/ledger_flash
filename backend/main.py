@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from backend.config import ALLOWED_ORIGINS, BASE_DIR
+from backend.config import ALLOWED_ORIGINS, BASE_DIR, OPENAI_API_KEY, OPENAI_MODEL
 from backend.routes import analysis, learning, ledger, reports, transactions
 from backend.services.sheet_service import sheet_service
 
@@ -24,7 +24,12 @@ app.include_router(reports.router, prefix="/api")
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "storage": sheet_service.mode}
+    return {
+        "status": "ok",
+        "storage": sheet_service.mode,
+        "ai_provider": "openai" if OPENAI_API_KEY else "heuristic",
+        "ai_model": OPENAI_MODEL if OPENAI_API_KEY else None,
+    }
 
 
 @app.get("/api/dashboard-stats")

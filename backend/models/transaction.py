@@ -48,7 +48,7 @@ class AnalysisResult(BaseModel):
     confidence: int = Field(ge=0, le=100)
     reason: str
     status: Literal["correct", "mismatch", "approved", "rejected"]
-    source: Literal["gemini", "learning", "heuristic"]
+    source: Literal["openai", "gemini", "learning", "heuristic"]
     analyzed_at: str
 
     @field_validator(
@@ -74,7 +74,7 @@ class ReviewRequest(BaseModel):
     result_id: str
 
 
-class GeminiDecision(BaseModel):
+class LedgerDecision(BaseModel):
     status: Literal["correct", "mismatch"]
     current_ledger: str
     suggested_ledger: str

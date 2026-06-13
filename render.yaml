@@ -7,8 +7,8 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
-      - key: GEMINI_MODEL
-        value: gemini-2.5-flash
+      - key: OPENAI_MODEL
+        value: gpt-5.4-mini
       - key: MAX_UPLOAD_MB
         value: 10
       - key: GOOGLE_SHEET_ID
@@ -23,5 +23,5 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false
-      - key: GEMINI_API_KEY
+      - key: OPENAI_API_KEY
         sync: false

@@ -1,9 +1,9 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from backend.models.transaction import AnalysisResult, GeminiDecision, Transaction
-from backend.services.gemini_service import GeminiService
+from backend.models.transaction import AnalysisResult, LedgerDecision, Transaction
 from backend.services.learning_engine import LearningEngine
+from backend.services.openai_service import OpenAIService
 from backend.services.sheet_service import SheetService
 
 
@@ -15,7 +15,7 @@ class AnalysisService:
     def __init__(self, sheets: SheetService) -> None:
         self.sheets = sheets
         self.learning = LearningEngine(sheets)
-        self.gemini = GeminiService()
+        self.ai = OpenAIService()
 
     def analyze_all(self) -> list[dict]:
         ledger_names = [row["ledger_name"] for row in self.sheets.all("Ledger_Master")]
@@ -31,7 +31,7 @@ class AnalysisService:
     def _analyze(self, transaction: Transaction, ledgers: list[str]) -> AnalysisResult:
         learned = self.learning.find_match(transaction.narration, transaction.ledger_name)
         if learned:
-            decision = GeminiDecision(
+            decision = LedgerDecision(
                 status="mismatch",
                 current_ledger=transaction.ledger_name,
                 suggested_ledger=learned["correct_ledger"],
@@ -40,7 +40,7 @@ class AnalysisService:
             )
             source = "learning"
         else:
-            decision, source = self.gemini.analyze(transaction, ledgers)
+            decision, source = self.ai.analyze(transaction, ledgers)
         return AnalysisResult(
             result_id=str(uuid4()),
             **transaction.model_dump(exclude={"ledger_name"}),
