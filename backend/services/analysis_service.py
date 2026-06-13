@@ -3,6 +3,7 @@ from uuid import uuid4
 
 from backend.models.transaction import AnalysisResult, LedgerDecision, Transaction
 from backend.services.learning_engine import LearningEngine
+from backend.services.ledger_service import ledger_names
 from backend.services.openai_service import OpenAIService
 from backend.services.sheet_service import SheetService
 
@@ -18,13 +19,13 @@ class AnalysisService:
         self.ai = OpenAIService()
 
     def analyze_all(self) -> list[dict]:
-        ledger_names = [row["ledger_name"] for row in self.sheets.all("Ledger_Master")]
-        if not ledger_names:
+        available_ledgers = ledger_names(self.sheets.all("Ledger_Master"))
+        if not available_ledgers:
             raise ValueError("Upload a ledger master before running analysis")
         transactions = [Transaction.model_validate(row) for row in self.sheets.all("Transactions")]
         if not transactions:
             raise ValueError("Upload transactions before running analysis")
-        results = [self._analyze(transaction, ledger_names).model_dump() for transaction in transactions]
+        results = [self._analyze(transaction, available_ledgers).model_dump() for transaction in transactions]
         self.sheets.replace("Analysis_Result", results)
         return results
 

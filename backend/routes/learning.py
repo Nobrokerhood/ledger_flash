@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 
 from backend.models.transaction import CorrectionRequest, ReviewRequest
+from backend.services.ledger_service import ledger_names
 from backend.services.sheet_service import sheet_service
 
 router = APIRouter()
@@ -44,11 +45,9 @@ def reject(request: ReviewRequest):
 @router.post("/submit-correction")
 def submit_correction(request: CorrectionRequest):
     try:
-        ledgers = sheet_service.all("Ledger_Master")
         ledger_by_name = {
-            str(row.get("ledger_name", "")).strip().casefold(): str(row.get("ledger_name", "")).strip()
-            for row in ledgers
-            if str(row.get("ledger_name", "")).strip()
+            name.casefold(): name
+            for name in ledger_names(sheet_service.all("Ledger_Master"))
         }
         correct_ledger = ledger_by_name.get(request.correct_ledger.casefold())
         if not correct_ledger:

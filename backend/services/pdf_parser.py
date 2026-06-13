@@ -115,6 +115,75 @@ def parse_tabular(content: bytes, filename: str) -> list[dict[str, Any]]:
     return frame.to_dict(orient="records")
 
 
+def parse_ledger_names(content: bytes, filename: str) -> list[str]:
+    suffix = Path(filename).suffix.lower()
+    try:
+        if suffix == ".csv":
+            frames = [pd.read_csv(BytesIO(content), header=None)]
+        elif suffix in {".xlsx", ".xls"}:
+            workbook = pd.ExcelFile(BytesIO(content))
+            frames = [pd.read_excel(workbook, sheet_name=sheet, header=None) for sheet in workbook.sheet_names]
+        else:
+            raise ValueError("Upload a CSV or Excel file")
+    except Exception as exc:
+        raise ValueError(f"Could not read {suffix or 'file'}: {exc}") from exc
+
+    from backend.services.ledger_service import normalize_ledger_name
+
+    # Statement exports contain transaction columns. In that format only explicit
+    # Account Name values are valid ledger-master entries.
+    statement_names = []
+    for frame in frames:
+        for value in frame.to_numpy().flatten():
+            match = ACCOUNT_NAME_PATTERN.search(_cell(value))
+            if match:
+                name = normalize_ledger_name(match.group(1))
+                if name and name.casefold() not in {item.casefold() for item in statement_names}:
+                    statement_names.append(name)
+    has_statement_header = any(
+        _cell(value).casefold() == "statement of account"
+        for frame in frames
+        for value in frame.to_numpy().flatten()
+    )
+    if has_statement_header:
+        return statement_names
+
+    aliases = {choice.casefold() for choice in ALIASES["ledger_name"]}
+    names: list[str] = []
+    seen: set[str] = set()
+    for frame in frames:
+        ledger_column = None
+        header_index = None
+        for index, row in frame.iterrows():
+            for column, value in enumerate(row.tolist()):
+                if _cell(value).casefold() in aliases:
+                    header_index = index
+                    ledger_column = column
+                    break
+            if ledger_column is not None:
+                break
+
+        if ledger_column is not None and header_index is not None:
+            values = frame.iloc[header_index + 1:, ledger_column].tolist()
+        else:
+            nonempty_columns = [
+                column
+                for column in frame.columns
+                if any(_cell(value) for value in frame[column].tolist())
+            ]
+            if len(nonempty_columns) != 1:
+                continue
+            values = frame[nonempty_columns[0]].tolist()
+
+        for value in values:
+            name = normalize_ledger_name(_cell(value))
+            key = name.casefold()
+            if name and key not in seen:
+                seen.add(key)
+                names.append(name)
+    return names
+
+
 def parse_statement_tabular(content: bytes, filename: str) -> list[dict[str, Any]]:
     suffix = Path(filename).suffix.lower()
     if suffix == ".csv":
