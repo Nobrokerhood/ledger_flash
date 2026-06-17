@@ -39,7 +39,7 @@ async function loadStats() {
   try {
     const stats = await api("/dashboard-stats");
     const cards = [["Total transactions", stats.total_transactions], ["Potential errors", stats.potential_errors], ["Learning records", stats.learning_records], ["AI accuracy", `${stats.accuracy_percentage}%`]];
-    document.querySelector("#stats").innerHTML = cards.map(([label,value]) => `<div class="stat-item"><div class="card panel stat"><div class="card-body"><p>${label}</p><div class="number">${value}</div></div></div>`).join("");
+    document.querySelector("#stats").innerHTML = cards.map(([label,value]) => `<div class="stat-item"><div class="card panel stat"><div class="card-body"><p>${label}</p><div class="number">${value}</div></div></div></div>`).join("");
   } catch (error) { alertBox(error.message, "danger"); }
 }
 for (const [formId, path] of [["ledger-form","/upload-ledger"],["transaction-form","/upload-transactions"]]) {
@@ -69,7 +69,7 @@ function renderResults() {
 document.querySelector("#search").addEventListener("input", renderResults);
 document.querySelector("#status-filter").addEventListener("change", renderResults);
 async function review(result_id, action) {
-  try { await api(`/${action}-suggestion`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({result_id}) }); alertBox(`Suggestion ${action}d`); loadResults(); }
+  try { await api(`/${action}-suggestion`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({result_id}) }); alertBox(action === "reject" ? "Suggestion rejected" : "Suggestion approved"); loadResults(); }
   catch (error) { alertBox(error.message, "danger"); }
 }
 async function openCorrection(resultId) {

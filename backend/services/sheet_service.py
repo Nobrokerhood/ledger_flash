@@ -149,12 +149,25 @@ class SheetService:
             self._write(data)
 
     def update(self, sheet_name: str, key: str, value: str, updates: dict[str, Any]) -> dict[str, Any]:
-        rows = self.all(sheet_name)
-        for row in rows:
-            if str(row.get(key)) == value:
-                row.update(updates)
-                self.replace(sheet_name, rows)
-                return row
+        self._validate_name(sheet_name)
+        if self._client:
+            rows = self._client.worksheet(sheet_name).get_all_records()
+            for row in rows:
+                if str(row.get(key)) == value:
+                    row.update(updates)
+                    sheet = self._client.worksheet(sheet_name)
+                    sheet.clear()
+                    sheet.update([SHEETS[sheet_name], *[[r[k] for k in SHEETS[sheet_name]] for r in rows]])
+                    return row
+            raise KeyError(f"{sheet_name} record not found")
+        with self._lock:
+            data = self._read()
+            rows = data[sheet_name]
+            for row in rows:
+                if str(row.get(key)) == value:
+                    row.update(updates)
+                    self._write(data)
+                    return row
         raise KeyError(f"{sheet_name} record not found")
 
     @staticmethod

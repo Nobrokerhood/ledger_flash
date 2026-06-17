@@ -60,8 +60,8 @@ def _cell(value: Any) -> str:
 
 
 def _is_total_row(row: dict[str, Any]) -> bool:
-    text = " ".join(_cell(value) for value in row.values()).replace(" ", "").casefold()
-    return "total" in text or "tota l" in text
+    text = " ".join(_cell(value) for value in row.values()).casefold()
+    return bool(re.search(r"tota\s*l", text))
 
 
 def _statement_rows(frame: pd.DataFrame) -> list[dict[str, Any]]:
@@ -186,13 +186,16 @@ def parse_ledger_names(content: bytes, filename: str) -> list[str]:
 
 def parse_statement_tabular(content: bytes, filename: str) -> list[dict[str, Any]]:
     suffix = Path(filename).suffix.lower()
-    if suffix == ".csv":
-        frames = [pd.read_csv(BytesIO(content), header=None)]
-    elif suffix in {".xlsx", ".xls"}:
-        workbook = pd.ExcelFile(BytesIO(content))
-        frames = [pd.read_excel(workbook, sheet_name=sheet, header=None) for sheet in workbook.sheet_names]
-    else:
-        return []
+    try:
+        if suffix == ".csv":
+            frames = [pd.read_csv(BytesIO(content), header=None)]
+        elif suffix in {".xlsx", ".xls"}:
+            workbook = pd.ExcelFile(BytesIO(content))
+            frames = [pd.read_excel(workbook, sheet_name=sheet, header=None) for sheet in workbook.sheet_names]
+        else:
+            return []
+    except Exception as exc:
+        raise ValueError(f"Could not read {suffix or 'file'}: {exc}") from exc
 
     rows: list[dict[str, Any]] = []
     for frame in frames:

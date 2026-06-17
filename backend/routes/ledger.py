@@ -18,7 +18,7 @@ def ledgers():
 
 @router.post("/upload-ledger")
 async def upload_ledger(file: UploadFile = File(...)):
-    content = file.file.read()
+    content = await file.read()
     if len(content) > MAX_UPLOAD_BYTES:
         raise HTTPException(413, "File exceeds upload size limit")
     try:

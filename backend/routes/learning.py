@@ -18,6 +18,8 @@ def approve(request: ReviewRequest):
     try:
         rows = sheet_service.all("Analysis_Result")
         result = next(row for row in rows if row["result_id"] == request.result_id)
+        if result["status"] in ("approved", "rejected"):
+            raise HTTPException(400, f"Result is already {result['status']}")
         if result["status"] == "mismatch":
             sheet_service.append("Learning_Data", {
                 "narration": result["narration"],

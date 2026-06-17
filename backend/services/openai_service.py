@@ -32,17 +32,18 @@ class OpenAIService:
         last_error = None
         for attempt in range(3):
             try:
-                response = self.client.responses.parse(
+                response = self.client.beta.chat.completions.parse(
                     model=OPENAI_MODEL,
-                    input=[
+                    messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt},
                     ],
-                    text_format=LedgerDecision,
+                    response_format=LedgerDecision,
                 )
-                if response.output_parsed is None:
+                parsed = response.choices[0].message.parsed
+                if parsed is None:
                     raise ValueError("OpenAI returned no structured decision")
-                return response.output_parsed, "openai"
+                return parsed, "openai"
             except Exception as exc:
                 last_error = exc
                 status_code = getattr(exc, "status_code", None)

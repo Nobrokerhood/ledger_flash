@@ -18,7 +18,7 @@ def _amount(value) -> float:
 
 @router.post("/upload-transactions")
 async def upload_transactions(file: UploadFile = File(...)):
-    content = file.file.read()
+    content = await file.read()
     if len(content) > MAX_UPLOAD_BYTES:
         raise HTTPException(413, "File exceeds upload size limit")
     try:
