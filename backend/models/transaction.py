@@ -10,6 +10,7 @@ def _string(value) -> str:
 
 
 class Transaction(BaseModel):
+    society_id: str = ""
     transaction_id: str
     voucher_number: str = ""
     date: str = ""
@@ -20,6 +21,7 @@ class Transaction(BaseModel):
     bill_number: str = ""
 
     @field_validator(
+        "society_id",
         "transaction_id",
         "voucher_number",
         "date",
@@ -35,6 +37,7 @@ class Transaction(BaseModel):
 
 
 class AnalysisResult(BaseModel):
+    society_id: str = ""
     result_id: str
     transaction_id: str
     voucher_number: str = ""
@@ -52,6 +55,7 @@ class AnalysisResult(BaseModel):
     analyzed_at: str
 
     @field_validator(
+        "society_id",
         "result_id",
         "transaction_id",
         "voucher_number",

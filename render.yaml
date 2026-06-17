@@ -8,9 +8,11 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.9
       - key: OPENAI_MODEL
-        value: gpt-5.4-mini
+        value: gpt-4o-mini
       - key: MAX_UPLOAD_MB
         value: 10
+      - key: ALLOWED_EMAIL_DOMAIN
+        value: nobroker.in
       - key: GOOGLE_SHEET_ID
         sync: false
       - key: GOOGLE_PROJECT_ID
@@ -24,4 +26,8 @@ services:
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: OPENAI_API_KEY
+        sync: false
+      - key: GOOGLE_OAUTH_CLIENT_ID
+        sync: false
+      - key: JWT_SECRET
         sync: false

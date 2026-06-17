@@ -19,21 +19,22 @@ GOOGLE_ENV_FIELDS = {
 }
 
 SHEETS = {
-    "Ledger_Master": ["ledger_id", "ledger_name", "created_at"],
+    "Ledger_Master": ["society_id", "ledger_id", "ledger_name", "created_at"],
     "Transactions": [
-        "transaction_id", "voucher_number", "date", "ledger_name", "narration",
+        "society_id", "transaction_id", "voucher_number", "date", "ledger_name", "narration",
         "amount", "invoice_number", "bill_number",
     ],
     "Analysis_Result": [
-        "result_id", "transaction_id", "voucher_number", "date", "invoice_number",
+        "society_id", "result_id", "transaction_id", "voucher_number", "date", "invoice_number",
         "bill_number", "narration", "amount", "current_ledger",
         "suggested_ledger", "confidence", "reason", "status", "source",
         "analyzed_at",
     ],
     "Learning_Data": [
-        "narration", "wrong_ledger", "correct_ledger", "timestamp",
+        "society_id", "narration", "wrong_ledger", "correct_ledger", "timestamp",
     ],
-    "Audit_History": ["result_id", "action", "timestamp"],
+    "Audit_History": ["society_id", "result_id", "action", "timestamp"],
+    "Login_Sessions": ["session_id", "email", "name", "login_at"],
 }
 
 
@@ -169,6 +170,14 @@ class SheetService:
                     self._write(data)
                     return row
         raise KeyError(f"{sheet_name} record not found")
+
+    def filter_by_society(self, sheet_name: str, society_id: str) -> list[dict[str, Any]]:
+        return [r for r in self.all(sheet_name) if str(r.get("society_id", "")) == society_id]
+
+    def replace_for_society(self, sheet_name: str, society_id: str, rows: list[dict[str, Any]]) -> None:
+        others = [r for r in self.all(sheet_name) if str(r.get("society_id", "")) != society_id]
+        normalized = [{**{k: "" for k in SHEETS[sheet_name]}, **row, "society_id": society_id} for row in rows]
+        self.replace(sheet_name, others + normalized)
 
     @staticmethod
     def _validate_name(sheet_name: str) -> None:

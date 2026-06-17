@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+import secrets
 
 from dotenv import load_dotenv
 
@@ -24,3 +25,7 @@ ALLOWED_ORIGINS = [
     for item in os.getenv("ALLOWED_ORIGINS", "*").split(",")
     if item.strip()
 ]
+
+GOOGLE_OAUTH_CLIENT_ID = os.getenv("GOOGLE_OAUTH_CLIENT_ID", "")
+JWT_SECRET = os.getenv("JWT_SECRET", secrets.token_hex(32))
+ALLOWED_EMAIL_DOMAIN = os.getenv("ALLOWED_EMAIL_DOMAIN", "nobroker.in")

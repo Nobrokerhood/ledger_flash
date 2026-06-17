@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from backend.models.transaction import CorrectionRequest, ReviewRequest
+from backend.services.auth_service import get_current_user
 from backend.services.ledger_service import ledger_names
 from backend.services.sheet_service import sheet_service
 
@@ -14,53 +15,71 @@ def _timestamp() -> str:
 
 
 @router.post("/approve-suggestion")
-def approve(request: ReviewRequest):
+def approve(request: ReviewRequest, current_user: dict = Depends(get_current_user)):
     try:
         rows = sheet_service.all("Analysis_Result")
         result = next(row for row in rows if row["result_id"] == request.result_id)
         if result["status"] in ("approved", "rejected"):
             raise HTTPException(400, f"Result is already {result['status']}")
+        society_id = str(result.get("society_id", ""))
         if result["status"] == "mismatch":
             sheet_service.append("Learning_Data", {
+                "society_id": society_id,
                 "narration": result["narration"],
                 "wrong_ledger": result["current_ledger"],
                 "correct_ledger": result["suggested_ledger"],
                 "timestamp": _timestamp(),
             })
         updated = sheet_service.update("Analysis_Result", "result_id", request.result_id, {"status": "approved"})
-        sheet_service.append("Audit_History", {"result_id": request.result_id, "action": "approved", "timestamp": _timestamp()})
+        sheet_service.append("Audit_History", {
+            "society_id": society_id,
+            "result_id": request.result_id,
+            "action": "approved",
+            "timestamp": _timestamp(),
+        })
         return updated
     except (KeyError, StopIteration) as exc:
         raise HTTPException(404, "Analysis result not found") from exc
 
 
 @router.post("/reject-suggestion")
-def reject(request: ReviewRequest):
+def reject(request: ReviewRequest, current_user: dict = Depends(get_current_user)):
     try:
+        rows = sheet_service.all("Analysis_Result")
+        result = next(row for row in rows if row["result_id"] == request.result_id)
+        society_id = str(result.get("society_id", ""))
         updated = sheet_service.update("Analysis_Result", "result_id", request.result_id, {"status": "rejected"})
-        sheet_service.append("Audit_History", {"result_id": request.result_id, "action": "rejected", "timestamp": _timestamp()})
+        sheet_service.append("Audit_History", {
+            "society_id": society_id,
+            "result_id": request.result_id,
+            "action": "rejected",
+            "timestamp": _timestamp(),
+        })
         return updated
     except KeyError as exc:
         raise HTTPException(404, "Analysis result not found") from exc
 
 
 @router.post("/submit-correction")
-def submit_correction(request: CorrectionRequest):
+def submit_correction(request: CorrectionRequest, current_user: dict = Depends(get_current_user)):
     try:
+        rows = sheet_service.all("Analysis_Result")
+        result = next(row for row in rows if str(row["result_id"]) == request.result_id)
+        society_id = str(result.get("society_id", ""))
+
         ledger_by_name = {
             name.casefold(): name
-            for name in ledger_names(sheet_service.all("Ledger_Master"))
+            for name in ledger_names(sheet_service.filter_by_society("Ledger_Master", society_id))
         }
         correct_ledger = ledger_by_name.get(request.correct_ledger.casefold())
         if not correct_ledger:
             raise HTTPException(400, "Correct ledger must be selected from the ledger master")
 
-        rows = sheet_service.all("Analysis_Result")
-        result = next(row for row in rows if str(row["result_id"]) == request.result_id)
         current_ledger = str(result["current_ledger"]).strip()
         is_current_correct = correct_ledger.casefold() == current_ledger.casefold()
 
         sheet_service.append("Learning_Data", {
+            "society_id": society_id,
             "narration": result["narration"],
             "wrong_ledger": current_ledger,
             "correct_ledger": correct_ledger,
@@ -82,6 +101,7 @@ def submit_correction(request: CorrectionRequest):
         )
         action = "confirmed-current" if is_current_correct else f"corrected:{correct_ledger}"
         sheet_service.append("Audit_History", {
+            "society_id": society_id,
             "result_id": request.result_id,
             "action": action,
             "timestamp": _timestamp(),
@@ -94,5 +114,7 @@ def submit_correction(request: CorrectionRequest):
 
 
 @router.get("/learning-data")
-def learning_data():
+def learning_data(society_id: str = "", current_user: dict = Depends(get_current_user)):
+    if society_id:
+        return sheet_service.filter_by_society("Learning_Data", society_id)
     return sheet_service.all("Learning_Data")

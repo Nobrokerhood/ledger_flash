@@ -1,10 +1,12 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.config import ALLOWED_ORIGINS, BASE_DIR, OPENAI_API_KEY, OPENAI_MODEL
 from backend.routes import analysis, learning, ledger, reports, transactions
+from backend.routes import auth as auth_router
+from backend.services.auth_service import get_current_user
 from backend.services.sheet_service import sheet_service
 
 app = FastAPI(title="Ledger Flash", version="1.0.0")
@@ -15,6 +17,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(auth_router.router, prefix="/api")
 app.include_router(ledger.router, prefix="/api")
 app.include_router(transactions.router, prefix="/api")
 app.include_router(analysis.router, prefix="/api")
@@ -33,15 +36,29 @@ def health():
 
 
 @app.get("/api/dashboard-stats")
-def dashboard_stats():
-    results = sheet_service.all("Analysis_Result")
-    mismatches = [row for row in results if row["status"] == "mismatch"]
+def dashboard_stats(society_id: str = "", current_user: dict = Depends(get_current_user)):
+    results = (
+        sheet_service.filter_by_society("Analysis_Result", society_id)
+        if society_id
+        else sheet_service.all("Analysis_Result")
+    )
+    txns = (
+        sheet_service.filter_by_society("Transactions", society_id)
+        if society_id
+        else sheet_service.all("Transactions")
+    )
+    learning_rows = (
+        sheet_service.filter_by_society("Learning_Data", society_id)
+        if society_id
+        else sheet_service.all("Learning_Data")
+    )
     correct = [row for row in results if row["status"] == "correct"]
+    mismatches = [row for row in results if row["status"] == "mismatch"]
     return {
-        "total_transactions": len(sheet_service.all("Transactions")),
+        "total_transactions": len(txns),
         "correct_entries": len(correct),
         "potential_errors": len(mismatches),
-        "learning_records": len(sheet_service.all("Learning_Data")),
+        "learning_records": len(learning_rows),
         "accuracy_percentage": round(len(correct) * 100 / len(results), 1) if results else 0,
         "storage": sheet_service.mode,
     }
