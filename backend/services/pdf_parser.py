@@ -8,7 +8,7 @@ import pandas as pd
 ALIASES = {
     "voucher_number": ["voucher_number", "voucher no", "voucher", "voucher number"],
     "date": ["date", "transaction date"],
-    "ledger_name": ["ledger_name", "ledger", "ledger name", "account"],
+    "ledger_name": ["ledger_name", "ledger", "ledger name", "account name", "account"],
     "narration": ["narration", "description", "particulars", "remarks"],
     "amount": ["amount", "debit", "value"],
     "invoice_number": ["invoice_number", "invoice no", "invoice number"],
