@@ -2,7 +2,7 @@
 
 Ledger Flash flags transactions that may have been posted to the wrong ledger, suggests a correction, and learns from approved review decisions.
 
-In Exception Review, reviewers can approve the AI suggestion, choose a different ledger, or confirm the current ledger. Confirmed feedback is stored in `Learning_Data`; narrations matching a previous decision above 90% similarity are resolved before an OpenAI call, reducing repeat API usage.
+In Exception Review, reviewers can approve the AI suggestion, choose a different ledger, or confirm the current ledger. Confirmed feedback is stored in `Learning_Data`; narrations matching a previous decision above 90% similarity are resolved before a Gemini call, reducing repeat API usage.
 
 Live application: 
 
@@ -22,8 +22,8 @@ Open `http://127.0.0.1:8000`. Use the files in `sample_data/` to try the flow.
 
 The app works immediately with file-backed JSON storage and a deterministic local analysis fallback. For production, configure:
 
-- `OPENAI_API_KEY`: enables OpenAI structured ledger analysis.
-- `OPENAI_MODEL`: OpenAI model used for analysis; defaults to `gpt-5.4-mini`.
+- `GEMINI_API_KEY`: enables Google Gemini structured ledger analysis.
+- `GEMINI_MODEL`: Google Gemini model used for analysis; defaults to `gemini-2.5-flash`.
 - `GOOGLE_SHEET_ID`: ID of the spreadsheet used for application data.
 - `GOOGLE_SERVICE_ACCOUNT_FILE`: local path to the Google service-account JSON file.
 - `ALLOWED_ORIGINS`: comma-separated frontend origins.
@@ -53,7 +53,7 @@ Common alternatives such as `voucher no`, `ledger`, `description`, `particulars`
 
 ## Deploy on Render
 
-Create a Blueprint from this repository using `render.yaml`, then add `GOOGLE_SHEET_ID`, the Render Google credential variables above, and `OPENAI_API_KEY` in the Render dashboard.
+Create a Blueprint from this repository using `render.yaml`, then add `GOOGLE_SHEET_ID`, the Render Google credential variables above, and `GEMINI_API_KEY` in the Render dashboard.
 
 If configuring the Render service manually instead of using the Blueprint, use:
 

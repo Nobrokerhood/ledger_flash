@@ -4,7 +4,7 @@ from uuid import uuid4
 from backend.models.transaction import AnalysisResult, LedgerDecision, Transaction
 from backend.services.learning_engine import LearningEngine
 from backend.services.ledger_service import ledger_names
-from backend.services.openai_service import OpenAIService
+from backend.services.openai_service import GeminiService
 from backend.services.sheet_service import SheetService
 
 
@@ -16,7 +16,7 @@ class AnalysisService:
     def __init__(self, sheets: SheetService) -> None:
         self.sheets = sheets
         self.learning = LearningEngine(sheets)
-        self.ai = OpenAIService()
+        self.ai = GeminiService()
 
     def analyze_all(self, society_id: str) -> list[dict]:
         available_ledgers = ledger_names(self.sheets.filter_by_society("Ledger_Master", society_id))

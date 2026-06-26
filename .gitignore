@@ -10,3 +10,4 @@ backend/uploads/*
 backend/reports/*
 data/*
 !data/.gitkeep
+.tmp_voucher_test.py

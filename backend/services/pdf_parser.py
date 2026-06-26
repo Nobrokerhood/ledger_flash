@@ -20,8 +20,10 @@ ACCOUNT_NAME_PATTERN = re.compile(
     re.IGNORECASE,
 )
 REFERENCE_PATTERNS = [
-    re.compile(r"(?:CN/DN No\.?|Ref(?:erence)?(?: Number| no)?\.?)\s*:?\s*([0-9][A-Za-z0-9/-]*)", re.IGNORECASE),
-    re.compile(r"Cheque Number\s*:?\s*([0-9][A-Za-z0-9/-]*)", re.IGNORECASE),
+    # Match reference/ref no/Reference Number followed by an alphanumeric reference
+    re.compile(r"(?:CN/DN No\.?|Ref(?:erence)?(?: Number| no)?\.?)\s*:?\s*([A-Za-z0-9][A-Za-z0-9/-]*)", re.IGNORECASE),
+    # Match Cheque Number followed by alphanumeric/number
+    re.compile(r"Cheque Number\s*:?\s*([A-Za-z0-9][A-Za-z0-9/-]*)", re.IGNORECASE),
 ]
 DATE_COLUMN_PATTERN = re.compile(r"^date$", re.IGNORECASE)
 PARTICULARS_COLUMN_PATTERN = re.compile(r"^particulars$", re.IGNORECASE)
@@ -44,6 +46,32 @@ def _account_name_from_text(text: str) -> str:
 
 
 def _voucher_number(particulars: str) -> str:
+    if not particulars:
+        return ""
+    text = str(particulars)
+    lower = text.lower()
+    key = "ref no."
+    idx = lower.find(key)
+    if idx != -1:
+        # Start right after 'Ref no.' and extract until one of the terminating markers
+        start = idx + len(key)
+        substr = text[start:]
+        lower_sub = substr.lower()
+        markers = [" cheque", " tran. id", " being"]
+        end_pos = None
+        for m in markers:
+            pos = lower_sub.find(m)
+            if pos != -1 and (end_pos is None or pos < end_pos):
+                end_pos = pos
+        if end_pos is not None:
+            candidate = substr[:end_pos]
+        else:
+            # No terminating marker found: take the first token-like sequence
+            m = re.match(r"\s*([A-Za-z0-9\-\_/]+)", substr)
+            candidate = m.group(1) if m else substr
+        return candidate.strip()
+
+    # Fallback: try other reference patterns
     for pattern in REFERENCE_PATTERNS:
         match = pattern.search(particulars)
         if match:
@@ -112,7 +140,16 @@ def parse_tabular(content: bytes, filename: str) -> list[dict[str, Any]]:
     except Exception as exc:
         raise ValueError(f"Could not read {suffix or 'file'}: {exc}") from exc
     frame = _normalize_columns(frame).fillna("")
-    return frame.to_dict(orient="records")
+
+    # Post-process rows to normalize cell values and extract voucher from narration when missing
+    rows: list[dict[str, Any]] = []
+    for raw in frame.to_dict(orient="records"):
+        row = {key: _cell(value) for key, value in raw.items()}
+        narration = row.get("narration", "").strip()
+        # Ensure voucher_number is populated from narration if not present
+        row["voucher_number"] = row.get("voucher_number", "").strip() or (_voucher_number(narration) if narration else "")
+        rows.append(row)
+    return rows
 
 
 def parse_ledger_names(content: bytes, filename: str) -> list[str]:

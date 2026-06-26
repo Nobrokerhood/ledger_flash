@@ -140,9 +140,10 @@ function renderResults() {
   const search = document.querySelector("#search").value.toLowerCase();
   const status = document.querySelector("#status-filter").value;
   const rows = results.filter(row => (!status || row.status === status) && JSON.stringify(row).toLowerCase().includes(search));
-  document.querySelector("#result-rows").innerHTML = rows.length
+    document.querySelector("#result-rows").innerHTML = rows.length
     ? rows.map(row => `<tr>
         <td>${escapeHtml(row.voucher_number)}</td>
+        <td>${escapeHtml(row.date || '')}</td>
         <td>${escapeHtml(row.invoice_number || row.bill_number)}</td>
         <td>${escapeHtml(row.current_ledger)}</td>
         <td><strong>${escapeHtml(row.suggested_ledger)}</strong><br><span class="badge badge-source">${escapeHtml(row.source)}</span></td>
@@ -155,7 +156,7 @@ function renderResults() {
           ${row.status === "mismatch" ? `<button class="btn btn-sm btn-light" onclick="review('${row.result_id}','reject')">Dismiss</button>` : ""}
         </div></td>
       </tr>`).join("")
-    : `<tr><td colspan="8" class="text-center text-muted py-5">No analysis results found.</td></tr>`;
+    : `<tr><td colspan="9" class="text-center text-muted py-5">No analysis results found.</td></tr>`;
 }
 
 document.querySelector("#search").addEventListener("input", renderResults);

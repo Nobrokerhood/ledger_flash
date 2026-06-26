@@ -51,7 +51,7 @@ class AnalysisResult(BaseModel):
     confidence: int = Field(ge=0, le=100)
     reason: str
     status: Literal["correct", "mismatch", "approved", "rejected"]
-    source: Literal["openai", "gemini", "learning", "heuristic"]
+    source: Literal["gemini", "learning", "heuristic"]
     analyzed_at: str
 
     @field_validator(
