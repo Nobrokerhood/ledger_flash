@@ -45,6 +45,7 @@ def _retry_delay_seconds(exc: Exception) -> float | None:
 class GeminiService:
     def __init__(self) -> None:
         self.model = None
+        self.disabled = False
         self._last_request_at: float | None = None
 
         print("--------------------------------------------------")
@@ -77,8 +78,11 @@ class GeminiService:
         ledgers: list[str]
     ) -> tuple[LedgerDecision, str]:
 
-        if not self.model:
-            print("Gemini model not initialized. Falling back to heuristic.")
+        if not self.model or self.disabled:
+            if self.disabled:
+                print("Gemini disabled due to prior permanent error. Using heuristic.")
+            else:
+                print("Gemini model not initialized. Falling back to heuristic.")
             return self._heuristic(transaction, ledgers), "heuristic"
 
         system_prompt = (
@@ -204,10 +208,9 @@ Rules:
                 print("--------------------------------------------------")
 
                 if isinstance(exc, _NON_RETRYABLE_EXCEPTIONS):
-                    raise GeminiConfigError(
-                        f"Gemini rejected the request ({type(exc).__name__}): {exc}. "
-                        "This will not resolve on retry — check GEMINI_API_KEY / model access."
-                    ) from exc
+                    print(f"Permanent error detected ({type(exc).__name__}). Disabling Gemini for remaining transactions.")
+                    self.disabled = True
+                    break
 
                 if attempt < GEMINI_MAX_RETRIES - 1:
                     is_rate_limited = isinstance(exc, google_exceptions.ResourceExhausted)
