@@ -18,6 +18,18 @@ from backend.config import (
 from backend.models.transaction import LedgerDecision, Transaction
 
 
+class GeminiConfigError(RuntimeError):
+    """Raised when Gemini rejects the request for a reason retrying can never fix (bad key, no access, etc)."""
+
+
+_NON_RETRYABLE_EXCEPTIONS = (
+    google_exceptions.InvalidArgument,
+    google_exceptions.PermissionDenied,
+    google_exceptions.Unauthenticated,
+    google_exceptions.NotFound,
+)
+
+
 def _retry_delay_seconds(exc: Exception) -> float | None:
     """Best-effort extraction of the server-suggested retry delay (e.g. from a 429 RetryInfo)."""
     for source in (getattr(exc, "metadata", None), getattr(exc, "details", None), str(exc)):
@@ -186,10 +198,16 @@ Rules:
                 if status_code is None:
                     status_code = getattr(exc, "code", None)
                 print(f"\nHTTP Status: {status_code}")
-                
+
                 print("\nTraceback:")
                 traceback.print_exc()
                 print("--------------------------------------------------")
+
+                if isinstance(exc, _NON_RETRYABLE_EXCEPTIONS):
+                    raise GeminiConfigError(
+                        f"Gemini rejected the request ({type(exc).__name__}): {exc}. "
+                        "This will not resolve on retry — check GEMINI_API_KEY / model access."
+                    ) from exc
 
                 if attempt < GEMINI_MAX_RETRIES - 1:
                     is_rate_limited = isinstance(exc, google_exceptions.ResourceExhausted)
