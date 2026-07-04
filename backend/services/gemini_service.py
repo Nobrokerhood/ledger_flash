@@ -11,6 +11,7 @@ from pydantic import ValidationError
 
 from backend.config import (
     GEMINI_API_KEY,
+    GEMINI_BATCH_SIZE,
     GEMINI_MAX_RETRIES,
     GEMINI_MODEL,
     GEMINI_REQUEST_DELAY_SECONDS,
@@ -245,6 +246,145 @@ Rules:
         )
 
         return fallback, "heuristic"
+
+    def analyze_batch(
+        self,
+        transactions: list[Transaction],
+        ledgers: list[str],
+    ) -> list[tuple[LedgerDecision, str]]:
+        """Analyze multiple transactions in a single Gemini API call."""
+
+        if not transactions:
+            return []
+
+        # If Gemini is unavailable, fall back immediately for all
+        if not self.model or self.disabled:
+            if self.disabled:
+                print("Gemini disabled due to prior permanent error. Using heuristic for batch.")
+            else:
+                print("Gemini model not initialized. Falling back to heuristic for batch.")
+            return [(self._heuristic(t, ledgers), "heuristic") for t in transactions]
+
+        # Build a numbered list of transactions for the prompt
+        tx_lines = []
+        for i, tx in enumerate(transactions):
+            tx_lines.append(
+                f'  {i}: {{"current_ledger": {json.dumps(tx.ledger_name)}, '
+                f'"narration": {json.dumps(tx.narration)}}}'
+            )
+
+        prompt = f"""You are an expert accountant reviewing ledger postings.
+For EACH transaction below, decide whether its narration belongs to its current ledger.
+If incorrect, suggest exactly one ledger from the available list.
+
+Available ledgers: {json.dumps(ledgers)}
+
+Transactions:
+{chr(10).join(tx_lines)}
+
+Return ONLY a valid JSON array with one object per transaction, in the SAME order.
+Each object must have:
+  "status": "correct" or "mismatch"
+  "current_ledger": the transaction's current ledger
+  "suggested_ledger": one of the available ledgers
+  "confidence": integer 0-100
+  "reason": short accounting explanation
+
+Return ONLY the JSON array. No markdown, no extra text."""
+
+        print(f"\n--- Batch request: {len(transactions)} transactions ---")
+
+        last_error = None
+        for attempt in range(GEMINI_MAX_RETRIES):
+            try:
+                print(f"Batch attempt {attempt + 1} of {GEMINI_MAX_RETRIES}...")
+                self._throttle()
+                response = self.model.generate_content(
+                    prompt, request_options={"timeout": 120}
+                )
+
+                response_text = ""
+                try:
+                    response_text = response.text
+                except Exception as text_exc:
+                    print(f"Failed to get response.text: {text_exc}")
+                    raise text_exc
+
+                # Extract JSON array from response
+                cleaned = response_text.strip()
+                match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", cleaned)
+                if match:
+                    cleaned = match.group(1).strip()
+                else:
+                    first = cleaned.find("[")
+                    last = cleaned.rfind("]")
+                    if first != -1 and last != -1 and last > first:
+                        cleaned = cleaned[first:last + 1]
+
+                parsed_list = json.loads(cleaned)
+                if not isinstance(parsed_list, list):
+                    raise ValueError(f"Expected JSON array, got {type(parsed_list).__name__}")
+
+                print(f"Parsed {len(parsed_list)} results from Gemini batch response")
+
+                # Validate each result; fall back to heuristic for any that fail
+                results: list[tuple[LedgerDecision, str]] = []
+                for i, tx in enumerate(transactions):
+                    if i < len(parsed_list):
+                        try:
+                            item = parsed_list[i]
+                            # Ensure current_ledger matches the transaction
+                            item["current_ledger"] = tx.ledger_name
+                            decision = LedgerDecision(**item)
+                            results.append((decision, "gemini"))
+                            continue
+                        except (ValidationError, TypeError, KeyError) as ve:
+                            print(f"Batch result #{i} validation failed: {ve}")
+                    # Fallback for missing or invalid results
+                    results.append((self._heuristic(tx, ledgers), "heuristic"))
+
+                print(f"Batch complete: {sum(1 for _, s in results if s == 'gemini')} gemini, "
+                      f"{sum(1 for _, s in results if s == 'heuristic')} heuristic")
+                return results
+
+            except (google_exceptions.GoogleAPICallError, grpc.RpcError) as exc:
+                last_error = exc
+                print(f"Batch Gemini request failed: {type(exc).__name__}: {exc}")
+                traceback.print_exc()
+
+                if isinstance(exc, _NON_RETRYABLE_EXCEPTIONS):
+                    print(f"Permanent error detected ({type(exc).__name__}). Disabling Gemini.")
+                    self.disabled = True
+                    break
+
+                if attempt < GEMINI_MAX_RETRIES - 1:
+                    is_rate_limited = isinstance(exc, google_exceptions.ResourceExhausted)
+                    retry_after = _retry_delay_seconds(exc)
+                    if retry_after is not None:
+                        wait_seconds = retry_after
+                    elif is_rate_limited:
+                        wait_seconds = min(60, 10 * (2 ** attempt))
+                    else:
+                        wait_seconds = min(30, 2 ** attempt)
+                    print(f"Waiting {wait_seconds}s before retrying batch...")
+                    sleep(wait_seconds)
+
+            except (json.JSONDecodeError, ValueError) as parse_exc:
+                print(f"Batch JSON parsing failed: {parse_exc}")
+                traceback.print_exc()
+                # On parse failure, retry — Gemini may return valid JSON on next attempt
+                if attempt < GEMINI_MAX_RETRIES - 1:
+                    sleep(min(30, 2 ** attempt))
+                last_error = parse_exc
+
+        # All retries exhausted — fall back to heuristic for the whole batch
+        print(f"Batch Gemini failed after {GEMINI_MAX_RETRIES} attempts. Heuristic fallback.")
+        results = []
+        for tx in transactions:
+            fb = self._heuristic(tx, ledgers)
+            fb.reason = f"{fb.reason} Gemini was unavailable, so Ledger Flash used local analysis."
+            results.append((fb, "heuristic"))
+        return results
 
     @staticmethod
     def _heuristic(
