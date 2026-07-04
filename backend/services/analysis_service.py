@@ -4,7 +4,7 @@ from uuid import uuid4
 from backend.models.transaction import AnalysisResult, LedgerDecision, Transaction
 from backend.services.learning_engine import LearningEngine
 from backend.services.ledger_service import ledger_names
-from backend.services.openai_service import GeminiService
+from backend.services.gemini_service import GeminiService
 from backend.services.sheet_service import SheetService
 
 

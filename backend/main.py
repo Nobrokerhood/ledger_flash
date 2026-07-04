@@ -9,6 +9,11 @@ from backend.routes import auth as auth_router
 from backend.services.auth_service import get_current_user
 from backend.services.sheet_service import sheet_service
 
+print("==================================================")
+print(f"Startup Config - GEMINI_API_KEY: {GEMINI_API_KEY}")
+print(f"Startup Config - GEMINI_MODEL: {GEMINI_MODEL}")
+print("==================================================")
+
 app = FastAPI(title="Ledger Flash", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
